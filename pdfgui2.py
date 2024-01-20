@@ -1,9 +1,15 @@
 import PyPDF2
 import tkinter as tk
-from tkinter import filedialog, messagebox
+from tkinter import filedialog, messagebox, simpledialog
+import os
+
+
+def show_error(message):
+    messagebox.showerror("Fout", message)
 
 
 class PDFManipulator:
+
     def __init__(self, window):
         self.window = window
         window.title("PDF Manipulator")
@@ -12,14 +18,16 @@ class PDFManipulator:
         self.label.grid(row=0, column=0)
 
         self.split_button = tk.Button(master=window, text="PDF splitsen", command=self.choose_split)
-        self.split_button.grid(row=1, column=0, padx=2, pady=2)
+        self.split_button.grid(row=1, column=0, pady=10)
 
-        self.merge_button = tk.Button(master=window, text="PDF samenvoegen", command=self.choose_merge)
-        self.merge_button.grid(row=2, column=0, padx=2, pady=2)
+        self.decrypt_button = tk.Button(master=window, text="Beveiliging verwijderen", command=self.choose_decrypt)
+        self.decrypt_button.grid(row=2, column=0, pady=10)
 
-        self.restrictions_button = tk.Button(master=window, text="Beperkingen Verwijderen",
-                                             command=self.choose_restrictions)
-        self.restrictions_button.grid(row=3, column=0, padx=2, pady=2)
+        self.merge_button = tk.Button(master=window, text="PDF samenvoegen", command=self.merge_pdf)
+        self.merge_button.grid(row=3, column=0, pady=10)
+
+        self.files = []
+        self.page_ranges = {}
 
         self.error_message = None
 
@@ -59,74 +67,26 @@ class PDFManipulator:
                                      command=self.back_to_main)
         self.back_button.grid(row=4, column=2, padx=5, pady=0)
 
-    def choose_merge(self):
+
+    def choose_decrypt(self):
         self.window.withdraw()
-        self.merge_window = tk.Tk()
-        self.merge_window.title("PDF Samenvoegen")
-
-        self.label = tk.Label(self.merge_window, text="Selecteer PDF-bestanden om samen te voegen:")
-        self.label.grid(row=0, column=0, columnspan=4, pady=5)
-
-        self.files_to_merge = []
-        self.pages_per_document = {}
-        self.page_ranges_per_document = {}
-
-        self.merge_listbox = tk.Listbox(self.merge_window, selectmode=tk.MULTIPLE)
-        self.merge_listbox.grid(row=1, column=0, columnspan=3, padx=5, pady=5)
-
-        self.add_files_button = tk.Button(self.merge_window, text="Bestanden toevoegen", command=self.add_merge_files)
-        self.add_files_button.grid(row=2, column=0, padx=5, pady=5)
-
-        self.remove_file_button = tk.Button(self.merge_window, text="Bestand verwijderen",
-                                            command=self.remove_merge_file)
-        self.remove_file_button.grid(row=2, column=1, padx=5, pady=5)
-
-        self.page_info_label = tk.Label(self.merge_window, text="Aantal pagina's:")
-        self.page_info_label.grid(row=3, column=0, columnspan=2, pady=5)
-
-        self.page_range_label = tk.Label(self.merge_window, text="Gewenste pagina's (bijv. 1, 3, 5-end):")
-        self.page_range_label.grid(row=4, column=0, pady=5)
-        self.page_range_entry = tk.Entry(self.merge_window)
-        self.page_range_entry.grid(row=4, column=1, pady=5)
-
-        self.add_page_range_button = tk.Button(self.merge_window, text="Paginabereik toevoegen",
-                                               command=self.add_page_range)
-        self.add_page_range_button.grid(row=4, column=2, pady=5)
-
-        self.output_label = tk.Label(self.merge_window, text="Uitvoerbestand:")
-        self.output_label.grid(row=5, column=0, pady=5)
-        self.output_entry = tk.Entry(self.merge_window)
-        self.output_entry.grid(row=5, column=1, pady=5)
-        self.select_output_button = tk.Button(self.merge_window, text="Selecteer bestand",
-                                              command=lambda: self.select_output_path(self.output_entry))
-        self.select_output_button.grid(row=5, column=2, pady=5)
-
-        self.merge_button = tk.Button(self.merge_window, text="PDF samenvoegen", command=self.merge_pdfs)
-        self.merge_button.grid(row=6, column=2, padx=5, pady=5)
-
-        self.back_button = tk.Button(self.merge_window, text="Terug naar keuzescherm", command=self.back_to_main)
-        self.back_button.grid(row=7, column=2, padx=5, pady=5)
-
-# Naast Listbox steeds het totaal aantal pagina's per document weergeven
-# Pagina range moet per document opgegeven kunnen worden op een voor de gebruiker duidelijk manier, het aantal mogelijk in te geven ranges moet overeenkomen met het aantal geselecteerde bestanden
-
-    def choose_restrictions(self):
-        self.window.withdraw()
-        self.restrictions_window = tk.Tk()
+        self.restrictions_window = tk.Toplevel(self.window)
         self.restrictions_window.title("Beperkingen Verwijderen")
 
+        # Label en button voor het selecteren van een PDF-bestand
         self.label = tk.Label(self.restrictions_window, text="Selecteer een PDF-bestand:")
         self.label.grid(row=0, column=0, sticky='e')
 
-        self.file_path = None
+        self.file_path = None  # Variable voor opslaan van geselecteerde bestandspad
+
+        self.restrictions_pdf_entry = tk.Entry(self.restrictions_window)
+        self.restrictions_pdf_entry.grid(row=0, column=1)
 
         self.select_button = tk.Button(master=self.restrictions_window, text="Selecteer PDF",
                                        command=lambda: self.select_pdf(self.restrictions_pdf_entry))
         self.select_button.grid(row=0, column=2)
 
-        self.restrictions_pdf_entry = tk.Entry(self.restrictions_window)
-        self.restrictions_pdf_entry.grid(row=0, column=1)
-
+        # Label en entry voor het selecteren van een uitvoermap
         self.restrictions_output_label = tk.Label(self.restrictions_window, text="Selecteer een uitvoermap:")
         self.restrictions_output_label.grid(row=1, column=0, sticky='e')
 
@@ -137,77 +97,63 @@ class PDFManipulator:
                                               command=lambda: self.select_output_path(self.restrictions_output_entry))
         self.select_output_button.grid(row=1, column=2)
 
+        # Button voor het starten van het verwijderen van beperkingen
         self.restrictions_button = tk.Button(master=self.restrictions_window, text="Verwijder beperkingen",
                                              command=self.remove_restrictions)
         self.restrictions_button.grid(row=2, column=2, padx=5, pady=2)
 
+        # Terug button
         self.back_button = tk.Button(master=self.restrictions_window, text="Terug naar keuzescherm",
                                      command=self.back_to_main)
         self.back_button.grid(row=3, column=2, padx=5, pady=0)
 
-    def add_merge_files(self):
-        files = filedialog.askopenfilenames(title="Selecteer PDF-bestanden", filetypes=[("PDF-bestanden", "*.pdf")])
-        if files:
-            self.files_to_merge.extend(files)
-            for file in files:
-                self.merge_listbox.insert(tk.END, file)
-                self.update_pages_info(file)
-
-    def remove_merge_file(self):
-        selected_indices = self.merge_listbox.curselection()
-        for idx in reversed(selected_indices):
-            file_to_remove = self.files_to_merge.pop(idx)
-            self.merge_listbox.delete(idx)
-            del self.pages_per_document[file_to_remove]
-
-    def update_pages_info(self, file_path):
-        with open(file_path, 'rb') as file:
-            pdf_reader = PyPDF2.PdfReader(file)
-            self.pages_per_document[file_path] = len(pdf_reader.pages)
-
-        total_pages = sum(self.pages_per_document.values())
-        self.page_info_label.config(text=f"Aantal pagina's: {total_pages}")
-
-    def add_page_range(self):
-        selected_files = self.merge_listbox.curselection()
-        if not selected_files:
-            self.show_error("Selecteer minstens één bestand om een paginabereik toe te voegen.")
+    def merge_pdf(self):
+        self.files = filedialog.askopenfilenames(filetypes=[("PDF files", "*.pdf")])
+        if not self.files:
             return
 
-        page_range = self.page_range_entry.get()
-        if not page_range:
-            self.show_error("Voer een paginabereik in.")
+        self.page_ranges = {}
+        for file in self.files:
+            with open(file, 'rb') as f:
+                reader = PyPDF2.PdfReader(f)
+                total_pages = len(reader.pages)
+                pages = simpledialog.askstring("Pagina's selecteren",
+                                               f"Selecteer pagina's voor {os.path.basename(file)} (bv. 1-3, 5, 18-end):")
+                self.page_ranges[file] = self.parse_page_ranges(pages, total_pages)
+
+        output_filename = simpledialog.askstring("Output bestandsnaam", "Voer de bestandsnaam in:")
+        if not output_filename:
             return
 
-        for file_index in selected_files:
-            file_path = self.files_to_merge[file_index]
-            if file_path not in self.pages_per_document:
-                self.update_pages_info(file_path)
+        output_folder = filedialog.askdirectory()
+        if not output_folder:
+            return
 
-            pages = self.parse_page_range(page_range, self.pages_per_document[file_path])
-            if 'end' in page_range.lower():
-                self.show_info("Let op: 'end' wordt geïnterpreteerd als het einde van het document.")
+        output_path = os.path.join(output_folder, output_filename + '.pdf')
+        merger = PyPDF2.PdfMerger()
 
-            if file_path not in self.page_ranges_per_document:
-                self.page_ranges_per_document[file_path] = []
+        for file, pages in self.page_ranges.items():
+            with open(file, 'rb') as f:
+                for page in pages:
+                    merger.append(fileobj=f, pages=(page, page + 1))
 
-            self.page_ranges_per_document[file_path].append(pages)
+        with open(output_path, 'wb') as f:
+            merger.write(f)
 
-        self.page_range_entry.delete(0, tk.END)
+        messagebox.showinfo("Klaar", f"Bestanden samengevoegd in {output_path}")
 
-    def parse_page_range(self, page_range, total_pages):
-        pages = []
-        groups = page_range.split(',')
-        for group in groups:
-            if '-' in group:
-                start_str, end_str = map(str.strip, group.split('-'))
-                start = int(start_str) if start_str else 1
-                end = int(end_str) if end_str and end_str.lower() != 'end' else total_pages
+    def parse_page_ranges(self, ranges_str, total_pages):
+        ranges = []
+        for part in ranges_str.split(','):
+            if '-' in part:
+                start_str, end_str = part.split('-')
+                start = int(start_str) - 1 if start_str.strip() else 0
+                end = int(end_str) - 1 if end_str.strip().lower() != 'end' else total_pages - 1
+                ranges.extend(range(start, end + 1))
             else:
-                start = end = int(group) if group.isdigit() else 1
-
-            pages.extend(range(start, end + 1))
-        return pages
+                page = int(part.strip()) - 1
+                ranges.append(page)
+        return ranges
 
     def select_output_path(self, entry):
         self.output_path = filedialog.askdirectory(title="Selecteer uitvoermap")
@@ -250,44 +196,12 @@ class PDFManipulator:
             self.show_info("PDF is succesvol gesplitst!")
 
         except IndexError:
-            self.show_error("Ongeldige paginabereiken. Zorg ervoor dat de opgegeven pagina's binnen het bereik vallen.")
-
-    def merge_pdfs(self):
-        page_range = self.page_range_entry.get()
-        output_path = self.output_entry.get()
-
-        try:
-            pdf_merger = PyPDF2.PdfMerger()
-
-            for file_path in self.files_to_merge:
-                pdf_merger.append(file_path, pages=self.page_ranges_per_document.get(file_path, None))
-
-            if page_range:
-                pages_to_merge = self.parse_page_range(page_range)
-                pdf_writer = PyPDF2.PdfWriter()
-
-                for page_num in pages_to_merge:
-                    pdf_writer.add_page(pdf_merger.pages[page_num - 1])
-
-                with open(f"{output_path}/samenvoegen_pagina_{page_range}.pdf", "wb") as output:
-                    pdf_writer.write(output)
-            else:
-                with open(f"{output_path}/samenvoegen_volledig.pdf", "wb") as output:
-                    pdf_merger.write(output)
-
-            self.page_range_entry.delete(0, tk.END)
-            self.output_entry.delete(0, tk.END)
-            self.show_info("PDF's zijn succesvol samengevoegd!")
-
-        except Exception as e:
-            self.show_error(f"Fout bij samenvoegen PDF's: {str(e)}")
+            show_error("Ongeldige paginabereiken. Zorg ervoor dat de opgegeven pagina's binnen het bereik vallen.")
 
     def remove_restrictions(self):
-        if not self.file_path:
-            self.show_error("Selecteer eerst een PDF-bestand.")
+        if not self.file_path or not self.restrictions_output_entry.get():
+            show_error("Selecteer eerst een PDF-bestand en een uitvoermap.")
             return
-
-        output_path = self.restrictions_output_entry.get()
 
         try:
             pdf_reader = PyPDF2.PdfReader(self.file_path)
@@ -296,12 +210,7 @@ class PDFManipulator:
             for page_num in range(len(pdf_reader.pages)):
                 pdf_writer.add_page(pdf_reader.pages[page_num])
 
-            output_file = filedialog.asksaveasfilename(
-                title="Opslaan als",
-                defaultextension=".pdf",
-                initialdir=output_path,
-                filetypes=[("PDF-bestanden", "*.pdf")]
-            )
+            output_file = os.path.join(self.restrictions_output_entry.get(), os.path.basename(self.file_path))
 
             if output_file:
                 with open(output_file, "wb") as output:
@@ -311,23 +220,25 @@ class PDFManipulator:
                 self.show_info("Beperkingen succesvol verwijderd!")
 
         except Exception as e:
-            self.show_error(f"Fout bij verwijderen beperkingen: {str(e)}")
+            show_error(f"Fout bij verwijderen beperkingen: {str(e)}")
 
     def back_to_main(self):
-        if hasattr(self, 'split_window'):
-            self.split_window.destroy()
-        if hasattr(self, 'merge_window'):
-            self.merge_window.destroy()
-        if hasattr(self, 'restrictions_window'):
-            self.restrictions_window.destroy()
+        try:
+            if hasattr(self, 'split_window') and self.split_window.winfo_exists():
+                self.split_window.destroy()
+        except tk.TclError:
+            pass
+
+        try:
+            if hasattr(self, 'restrictions_window') and self.restrictions_window.winfo_exists():
+                self.restrictions_window.destroy()
+        except tk.TclError:
+            pass
 
         self.window.deiconify()
 
     def show_info(self, message):
         self.show_message("Succes", message)
-
-    def show_error(self, message):
-        self.show_message("Fout", message, messagebox.showerror)
 
     def show_message(self, title, message, method=messagebox.showinfo):
         if self.error_message:
@@ -339,7 +250,3 @@ if __name__ == "__main__":
     root = tk.Tk()
     app = PDFManipulator(root)
     root.mainloop()
-
-# Invoegen/vervangen pagina
-# Foto's uit pdf extracten
-# Tekst uit pdf trekken naar word
