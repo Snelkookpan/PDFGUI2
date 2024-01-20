@@ -1,4 +1,5 @@
 import PyPDF2
+from pdf2docx import Converter
 import tkinter as tk
 from tkinter import filedialog, messagebox, simpledialog
 import os
@@ -26,6 +27,10 @@ class PDFManipulator:
         self.merge_button = tk.Button(master=window, text="PDF samenvoegen", command=self.merge_pdf)
         self.merge_button.grid(row=3, column=0, pady=10)
 
+        self.pdf_to_docx_button = tk.Button(master=window, text="PDF naar DOCX Converteren",
+                                            command=self.choose_pdf_to_docx)
+        self.pdf_to_docx_button.grid(row=4, column=0, pady=10)
+
         self.files = []
         self.page_ranges = {}
 
@@ -47,7 +52,7 @@ class PDFManipulator:
                                        command=lambda: self.select_pdf(self.select_doc_entry))
         self.select_button.grid(row=0, column=2)
 
-        self.page_groups_label = tk.Label(self.split_window, text="Te splitsen pagina's (bijv. 1, 3, 5-7, 10-end):")
+        self.page_groups_label = tk.Label(self.split_window, text="Te splitsen pagina's (bijv. 1-1, 3-3, 5-7, 10-end):")
         self.page_groups_label.grid(row=2, column=0, sticky='e')
         self.page_groups_entry = tk.Entry(self.split_window)
         self.page_groups_entry.grid(row=2, column=1)
@@ -106,6 +111,44 @@ class PDFManipulator:
         self.back_button = tk.Button(master=self.restrictions_window, text="Terug naar keuzescherm",
                                      command=self.back_to_main)
         self.back_button.grid(row=3, column=2, padx=5, pady=0)
+
+    def choose_pdf_to_docx(self):
+        self.window.withdraw()
+        self.pdf_to_docx_window = tk.Tk()
+        self.pdf_to_docx_window.title("PDF naar DOCX Converteren")
+
+        # Knop voor het starten van de conversie
+        self.convert_button = tk.Button(master=self.pdf_to_docx_window, text="Converteer naar DOCX",
+                                   command=self.pdf_to_docx)
+        self.convert_button.grid(row=2, column=2, padx=5, pady=2)
+
+        # Terug naar hoofdmenu knop
+        self.back_button = tk.Button(master=self.pdf_to_docx_window, text="Terug naar keuzescherm",
+                                command=self.back_to_main)
+        self.back_button.grid(row=3, column=2, padx=5, pady=0)
+
+    def pdf_to_docx(self):
+        input_pdf = filedialog.askopenfilename(
+            title="Selecteer een PDF-bestand",
+            filetypes=[("PDF-bestanden", "*.pdf")])
+        if not input_pdf:
+            return
+
+        output_docx = filedialog.asksaveasfilename(
+            title="Opslaan als DOCX",
+            defaultextension=".docx",
+            filetypes=[("DOCX-bestanden", "*.docx")])
+        if not output_docx:
+            return
+
+        try:
+            cv = Converter(input_pdf)
+            cv.convert(output_docx, start=0, end=None)
+            cv.close()
+            messagebox.showinfo("Succes", "Conversie voltooid!")
+        except Exception as e:
+            messagebox.showerror("Fout bij conversie", str(e))
+
 
     def merge_pdf(self):
         self.files = filedialog.askopenfilenames(filetypes=[("PDF files", "*.pdf")])
@@ -234,6 +277,12 @@ class PDFManipulator:
         try:
             if hasattr(self, 'restrictions_window') and self.restrictions_window.winfo_exists():
                 self.restrictions_window.destroy()
+        except tk.TclError:
+            pass
+
+        try:
+            if hasattr(self, 'pdf_to_docx_window') and self.pdf_to_docx_window.winfo_exists():
+                self.pdf_to_docx_window.destroy()
         except tk.TclError:
             pass
 
