@@ -149,7 +149,7 @@ class PDFManipulator:
                 start_str, end_str = part.split('-')
                 start = int(start_str) - 1 if start_str.strip() else 0
                 end = int(end_str) - 1 if end_str.strip().lower() != 'end' else total_pages - 1
-                ranges.extend(range(start - 1, end + 1))
+                ranges.extend(range(start - 1, end))
             else:
                 page = int(part.strip()) - 1
                 ranges.append(page)
@@ -184,12 +184,13 @@ class PDFManipulator:
                     start = end = int(group) if group.isdigit() else 1
 
                 pdf_writer = PyPDF2.PdfWriter()
-                for page_num in range(start - 1, end + 1):
+                for page_num in range(start - 1, end):
                     pdf_writer.add_page(pdf_reader.pages[page_num])
 
                 output_file = f"{output_path}/splitsing_pagina_{start}_{end}.pdf"
                 with open(output_file, "wb") as output:
                     pdf_writer.write(output)
+
             self.select_doc_entry.delete(0, tk.END)
             self.page_groups_entry.delete(0, tk.END)
             self.split_output_entry.delete(0, tk.END)
@@ -197,6 +198,7 @@ class PDFManipulator:
 
         except IndexError:
             show_error("Ongeldige paginabereiken. Zorg ervoor dat de opgegeven pagina's binnen het bereik vallen.")
+
 
     def remove_restrictions(self):
         if not self.file_path or not self.restrictions_output_entry.get():
