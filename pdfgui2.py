@@ -149,7 +149,7 @@ class PDFManipulator:
                 start_str, end_str = part.split('-')
                 start = int(start_str) - 1 if start_str.strip() else 0
                 end = int(end_str) - 1 if end_str.strip().lower() != 'end' else total_pages - 1
-                ranges.extend(range(start, end + 1))
+                ranges.extend(range(start - 1, end + 1))
             else:
                 page = int(part.strip()) - 1
                 ranges.append(page)
@@ -184,7 +184,7 @@ class PDFManipulator:
                     start = end = int(group) if group.isdigit() else 1
 
                 pdf_writer = PyPDF2.PdfWriter()
-                for page_num in range(start - 1, end):
+                for page_num in range(start - 1, end + 1):
                     pdf_writer.add_page(pdf_reader.pages[page_num])
 
                 output_file = f"{output_path}/splitsing_pagina_{start}_{end}.pdf"
@@ -245,6 +245,7 @@ class PDFManipulator:
             self.error_message.destroy()
 
         method(title, message)
+
 
 if __name__ == "__main__":
     root = tk.Tk()
