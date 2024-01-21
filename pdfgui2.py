@@ -118,12 +118,12 @@ class PDFManipulator:
 
         # Knop voor het starten van de conversie
         self.convert_button = tk.Button(master=self.pdf_to_docx_window, text="Converteer naar DOCX",
-                                        command=self.pdf_to_docx)
+                                   command=self.pdf_to_docx)
         self.convert_button.grid(row=2, column=2, padx=5, pady=2)
 
         # Terug naar hoofdmenu knop
         self.back_button = tk.Button(master=self.pdf_to_docx_window, text="Terug naar keuzescherm",
-                                     command=self.back_to_main)
+                                command=self.back_to_main)
         self.back_button.grid(row=3, column=2, padx=5, pady=0)
 
     def pdf_to_docx(self):
@@ -147,6 +147,7 @@ class PDFManipulator:
             messagebox.showinfo("Succes", "Conversie voltooid!")
         except Exception as e:
             messagebox.showerror("Fout bij conversie", str(e))
+
 
     def merge_pdf(self):
         self.files = filedialog.askopenfilenames(filetypes=[("PDF files", "*.pdf")])
@@ -185,13 +186,16 @@ class PDFManipulator:
         messagebox.showinfo("Klaar", f"Bestanden samengevoegd in {output_path}")
 
     def parse_page_ranges(self, ranges_str, total_pages):
+        if not ranges_str.strip():
+            return list(range(total_pages))  # Als er geen bereik is opgegeven, retourneer alle pagina's
+
         ranges = []
         for part in ranges_str.split(','):
             if '-' in part:
                 start_str, end_str = part.split('-')
                 start = int(start_str) - 1 if start_str.strip() else 0
-                end = int(end_str) - 1 if end_str.strip().lower() != 'end' else total_pages - 1
-                ranges.extend(range(start - 1, end))
+                end = int(end_str) if end_str.strip().lower() != 'end' else total_pages
+                ranges.extend(range(start, end))
             else:
                 page = int(part.strip()) - 1
                 ranges.append(page)
@@ -240,6 +244,7 @@ class PDFManipulator:
 
         except IndexError:
             show_error("Ongeldige paginabereiken. Zorg ervoor dat de opgegeven pagina's binnen het bereik vallen.")
+
 
     def remove_restrictions(self):
         if not self.file_path or not self.restrictions_output_entry.get():
