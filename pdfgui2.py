@@ -72,7 +72,6 @@ class PDFManipulator:
                                      command=self.back_to_main)
         self.back_button.grid(row=4, column=2, padx=5, pady=0)
 
-
     def choose_decrypt(self):
         self.window.withdraw()
         self.restrictions_window = tk.Toplevel(self.window)
@@ -119,12 +118,12 @@ class PDFManipulator:
 
         # Knop voor het starten van de conversie
         self.convert_button = tk.Button(master=self.pdf_to_docx_window, text="Converteer naar DOCX",
-                                   command=self.pdf_to_docx)
+                                        command=self.pdf_to_docx)
         self.convert_button.grid(row=2, column=2, padx=5, pady=2)
 
         # Terug naar hoofdmenu knop
         self.back_button = tk.Button(master=self.pdf_to_docx_window, text="Terug naar keuzescherm",
-                                command=self.back_to_main)
+                                     command=self.back_to_main)
         self.back_button.grid(row=3, column=2, padx=5, pady=0)
 
     def pdf_to_docx(self):
@@ -149,7 +148,6 @@ class PDFManipulator:
         except Exception as e:
             messagebox.showerror("Fout bij conversie", str(e))
 
-
     def merge_pdf(self):
         self.files = filedialog.askopenfilenames(filetypes=[("PDF files", "*.pdf")])
         if not self.files:
@@ -161,7 +159,8 @@ class PDFManipulator:
                 reader = PyPDF2.PdfReader(f)
                 total_pages = len(reader.pages)
                 pages = simpledialog.askstring("Pagina's selecteren",
-                                               f"Selecteer pagina's voor {os.path.basename(file)} (bv. 1-3, 5, 18-end):")
+                                               f"Selecteer pagina's voor {os.path.basename(file)} "
+                                               f"(bv. 1-3, 5, 18-end):")
                 self.page_ranges[file] = self.parse_page_ranges(pages, total_pages)
 
         output_filename = simpledialog.askstring("Output bestandsnaam", "Voer de bestandsnaam in:")
@@ -241,7 +240,6 @@ class PDFManipulator:
 
         except IndexError:
             show_error("Ongeldige paginabereiken. Zorg ervoor dat de opgegeven pagina's binnen het bereik vallen.")
-
 
     def remove_restrictions(self):
         if not self.file_path or not self.restrictions_output_entry.get():
